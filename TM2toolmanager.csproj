@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net6.0</TargetFramework>
+        <RootNamespace>TM2toolmanager</RootNamespace>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <ItemGroup Condition=" '$(EnableDefaultItems)' == 'false' ">
+    <Compile Include="Resources/Error.cs" Condition=" '$(EnableDefaultCompileItems)' == 'false' " />
+    <Compile Include="Resources/PAK.cs" Condition=" '$(EnableDefaultCompileItems)' == 'false' " />
+    <Compile Include="Utils/HexTool.cs" Condition=" '$(EnableDefaultCompileItems)' == 'false' " />
+    <Compile Include="Utils/PathTool.cs" Condition=" '$(EnableDefaultCompileItems)' == 'false' " />
+    <Compile Include="Program.cs" Condition=" '$(EnableDefaultCompileItems)' == 'false' " />
+    </ItemGroup>
+
+</Project>
