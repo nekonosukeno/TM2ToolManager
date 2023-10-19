@@ -70,17 +70,16 @@ namespace TM2toolmanager
             
             return NewPath;
         }
-
-        // Does what it says on the can
-        public static string JSONreader(string Path)
+        
+        // Returns whether forward or back slash
+        public static string GetSlashType()
         {
-            string result = "";
-            using (StreamReader readJSON = new StreamReader(Path))
-            {
-                result += readJSON.ReadToEnd();
-            }
+            var OS = Environment.OSVersion;
+            string OpSys = Convert.ToString(OS.Platform);
+            string slash = "/";
+            if (OpSys.StartsWith("Win")) { slash = "\\"; }
 
-            return result;
+            return slash;
         }
     }
 }
