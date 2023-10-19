@@ -9,9 +9,11 @@
     </PropertyGroup>
     <ItemGroup Condition=" '$(EnableDefaultItems)' == 'false' ">
     <Compile Include="Resources/Error.cs" Condition=" '$(EnableDefaultCompileItems)' == 'false' " />
+    <Compile Include="Resources/IMG.cs" Condition=" '$(EnableDefaultCompileItems)' == 'false' " />
     <Compile Include="Resources/PAK.cs" Condition=" '$(EnableDefaultCompileItems)' == 'false' " />
     <Compile Include="Utils/HexTool.cs" Condition=" '$(EnableDefaultCompileItems)' == 'false' " />
     <Compile Include="Utils/PathTool.cs" Condition=" '$(EnableDefaultCompileItems)' == 'false' " />
+    <Compile Include="Utils/Transcoding.cs" Condition=" '$(EnableDefaultCompileItems)' == 'false' " />
     <Compile Include="Program.cs" Condition=" '$(EnableDefaultCompileItems)' == 'false' " />
     </ItemGroup>
 
