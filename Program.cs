@@ -42,8 +42,16 @@ namespace TM2toolmanager
                     if (File.Exists(args[args.Length-1])) { inputFile = args[args.Length-1]; }
                     break;
             }
+
+            var IMGinfo = EXTfinder.IMGinfo(inputFile, bDebug);
+
+            if (IMGinfo.isIMG)
+            {
+                Console.WriteLine($"{IMGinfo.IMGtype} has been found!");
+                EXTfinder.ExtractIMG(inputFile, IMGinfo.IMGtype, IMGinfo.TM2count, bDebug);
+            }
             
-            if (inputFile.EndsWith(".json")) { EXTfinder.RebuildPAK(inputFile, bDebug); }
+            else if (inputFile.EndsWith(".json")) { EXTfinder.RebuildPAK(inputFile, bDebug); }
             
             else { EXTfinder.ExtractPAK(inputFile, bDebug); }
         }
