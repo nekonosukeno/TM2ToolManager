@@ -12,12 +12,12 @@ namespace TM2toolmanager
 {
     public static class HexTool
     {
-        // Reads byte array, flips endian, and returns int32
+        // Reads byte array, corrects endian, and returns int32
         public static int PS2intReader(byte[] raw)
         {
             // for (int i = 0; i < raw.Length; i++) { Console.WriteLine($"0 x {BitConverter.ToString(new[] {raw[i]})} "); }
             
-            // Numeric values stored in PS2 binary files are practically always little endian
+            // Numeric values stored in PS2 binary files are always little endian
             if (!BitConverter.IsLittleEndian) { Array.Reverse(raw); }
             return BitConverter.ToInt32(raw);
         }
