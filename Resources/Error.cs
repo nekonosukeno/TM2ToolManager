@@ -8,7 +8,7 @@ namespace TM2toolmanager
 {
     public static class Err
     {
-        public static string V = "v0.4b";
+        public static string V = "v0.5b";
         public static List<string> Codes = new List<string>
         {
             "Error: \"", "Invalid argument or cannot find file.", "\" is not supported.",
@@ -68,7 +68,6 @@ namespace TM2toolmanager
             Console.WriteLine("    -e, --extract     Extract all files in directory");
             Console.WriteLine("    -p, --repack      Repacks all files in directory\n");
             Console.WriteLine("Useage:");
-            Console.WriteLine("Add tool to Path or move game file to same directory as tool\n");
             Console.WriteLine("Unpack PAK or IMG archive (.img, .chr, .pac, .pak, etc):");
             Console.WriteLine("./TM2toolmanager [-d || --debug] <MyFile0.PAK> [MyFile1.PAK...]\n");
             Console.WriteLine("Using batch mode:");
