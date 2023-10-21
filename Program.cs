@@ -16,44 +16,86 @@ namespace TM2toolmanager
         {
             
             bool bDebug = false;
-            string inputFile = "";
+            bool bHelp = false;
+            bool bBatch = false;
+            bool bExtract = false;
+            bool bRePAK = false;
+
+            List<string> fileList = new List<string>();
             
-            // if (args.Length == 0) { Err.Help(0); }
-            switch (args.Length)
+            foreach (string arg in args)
             {
-                case 0:
-                    Err.Help(0); break;
-                case 1:
-                    if ( (args[0] == "-h") || (args[0] == "--help") ) { Err.Help(0); }
+                switch (arg)
+                {
+                    case "-d":
+                    case "--debug":
+                        bDebug = true; break;
                     
-                    if (!File.Exists(args[0])) { Err.Help(1); }
-                    else { inputFile = args[0]; }
-                    
-                    break;
-                case 2:
-                    if (((args[0] == "-d") || (args[0] == "--debug")) && File.Exists(args[1]))
+                    case "-h":
+                    case "--help":
+                        bHelp = true; break;
+                        
+                    case "-b":
+                    case "--batch":
+                        bBatch = true; break;
+                        
+                    case "-e":
+                    case "--extract":
+                        bExtract = true; break;
+                        
+                    case "-p" :
+                    case "--repack":
+                        bRePAK = true; break;
+                        
+                    default:
+                        if (File.Exists(arg)) { fileList.Add(arg); }
+                        else { Err.Help(1); }
+                        break;
+                }
+            }
+            
+            if (bHelp || args.Length == 0) { Err.Help(0); }
+            
+            string cwd = Directory.GetCurrentDirectory();
+            List<string> files = Directory.EnumerateFiles(cwd).ToList();
+            List<string> Extensions = new List<string>
+                { ".json", ".txt", ".cfg", ".py", ".md", ".cs", ".mds", ".mot", ".tm2", ".bak", ".png", ".pdb", "ger" };
+
+            if (bBatch)
+            {
+                fileList.Clear();
+                foreach (string file in files)
+                {
+                    if (File.Exists(file))
                     {
-                        bDebug = true;
-                        inputFile = args[1];
+                        if (bRePAK && file.EndsWith(".json")) { fileList.Add(file); }
+                        if (bExtract)
+                        {
+                            foreach (string badExt in Extensions)
+                            {
+                                if (file.EndsWith(badExt)) { ; }
+                                else { fileList.Add(file); }
+                            }
+                        }
+                        else { Err.Help(7); }
                     }
-                    else { Err.Help(1); }
-                    break;
-                default:
-                    if (File.Exists(args[args.Length-1])) { inputFile = args[args.Length-1]; }
-                    break;
+                }
             }
 
-            var IMGinfo = EXTfinder.IMGinfo(inputFile, bDebug);
-
-            if (IMGinfo.isIMG)
+            foreach (string inputFile in fileList)
             {
-                Console.WriteLine($"{IMGinfo.IMGtype} has been found!");
-                EXTfinder.ExtractIMG(inputFile, IMGinfo.IMGtype, IMGinfo.TM2count, bDebug);
+                var IMGinfo = EXTfinder.IMGinfo(inputFile, bDebug);
+
+                if (IMGinfo.isIMG)
+                {
+                    Console.WriteLine($"{IMGinfo.IMGtype} has been found!");
+                    EXTfinder.ExtractIMG(inputFile, IMGinfo.IMGtype, IMGinfo.TM2count, bDebug);
+                }
+            
+                else if (inputFile.EndsWith(".json")) { EXTfinder.RebuildPAK(inputFile, bDebug); }
+            
+                else { EXTfinder.ExtractPAK(inputFile, bDebug); }
             }
-            
-            else if (inputFile.EndsWith(".json")) { EXTfinder.RebuildPAK(inputFile, bDebug); }
-            
-            else { EXTfinder.ExtractPAK(inputFile, bDebug); }
         }
     }
 }
