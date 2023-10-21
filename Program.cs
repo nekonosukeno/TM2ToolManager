@@ -42,8 +42,8 @@ namespace TM2toolmanager
                     case "-e":
                     case "--extract":
                         bExtract = true; break;
-                        
-                    case "-p" :
+                    
+                    case "-p":
                     case "--repack":
                         bRePAK = true; break;
                         
@@ -64,6 +64,7 @@ namespace TM2toolmanager
             if (bBatch)
             {
                 fileList.Clear();
+                if (!bRePAK && !bExtract) { Err.Help(7); }
                 foreach (string file in files)
                 {
                     if (File.Exists(file))
@@ -71,30 +72,44 @@ namespace TM2toolmanager
                         if (bRePAK && file.EndsWith(".json")) { fileList.Add(file); }
                         if (bExtract)
                         {
+                            bool bAdd = true;
                             foreach (string badExt in Extensions)
                             {
-                                if (file.EndsWith(badExt)) { ; }
-                                else { fileList.Add(file); }
+                                if (file.EndsWith(badExt)) { bAdd = false; }
                             }
+                            if (bAdd) {fileList.Add(file);}
                         }
-                        else { Err.Help(7); }
                     }
                 }
             }
 
             foreach (string inputFile in fileList)
             {
-                var IMGinfo = EXTfinder.IMGinfo(inputFile, bDebug);
+                string fName = inputFile;
+                if (bDebug) { Console.WriteLine($"Input File: {fName}"); }
+                
+                var IMGinfo = EXTfinder.IMGinfo(fName, bDebug);
 
                 if (IMGinfo.isIMG)
                 {
                     Console.WriteLine($"{IMGinfo.IMGtype} has been found!");
-                    EXTfinder.ExtractIMG(inputFile, IMGinfo.IMGtype, IMGinfo.TM2count, bDebug);
+                    EXTfinder.ExtractIMG(fName, IMGinfo.IMGtype, IMGinfo.TM2count, bDebug);
                 }
             
-                else if (inputFile.EndsWith(".json")) { EXTfinder.RebuildPAK(inputFile, bDebug); }
+                else if (fName.EndsWith(".json"))
+                {
+                    var jsonContents = Transcoding.JSONreader(fName);
+                    if (jsonContents.repackType == "PAK")
+                    {
+                        EXTfinder.RebuildPAK(jsonContents.contents, bDebug);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Do not have a repacker for this type.");
+                    }
+                }
             
-                else { EXTfinder.ExtractPAK(inputFile, bDebug); }
+                else { EXTfinder.ExtractPAK(fName, bDebug); }
             }
         }
     }
