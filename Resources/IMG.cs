@@ -78,10 +78,11 @@ namespace TM2toolmanager
 
         public static void ExtractIMG(string input, string IMGtype, int TM2count, bool debug)
         {
-            string IMGname = PathTool.BaseName(input);
-            string cwd = Directory.GetCurrentDirectory();
             string slash = PathTool.GetSlashType();
-            string unIMGdir = $"{cwd}{slash}{IMGname}";
+            string cwd = Directory.GetCurrentDirectory();
+            string IMGname = PathTool.BaseName(input);
+            string IMGpath = input.Contains(slash) ? PathTool.rmName(input) : $"{cwd}{slash}";
+            string unIMGdir = $"{IMGpath}{IMGname}";
             string unIMGjson = $"{unIMGdir}.json";
             
             if (!Directory.Exists(unIMGdir)) { Directory.CreateDirectory(unIMGdir); }
@@ -125,7 +126,6 @@ namespace TM2toolmanager
                         Console.WriteLine($"\nIMG File Name: {PathTool.FileName(sub[0].IMGname)}");
                         Console.WriteLine($"IMG Version: {sub[0].IMGtype} with {Convert.ToString(TM2count)} textures");
                         Console.WriteLine($"Header Length: {HexTool.BigEndHex(sub[0].headerLength)}");
-
                     }
                 }
 
@@ -146,7 +146,7 @@ namespace TM2toolmanager
                     sub[i].footer = HexTool.PS2intReader(buffer[(hold + footerOff)..(hold + footerOff + 0x08)]);
                     
                     int TM2off = hold + TM2sizeOff + 0x40;
-                    // If not last loop, checkTM2size = either A : B
+                    // If last loop, check size offset is now end of file
                     checkTM2Size = i < (TM2count - 1) ?
                         HexTool.PS2intReader(buffer[TM2off..(TM2off + 0x04)]) : buffer.Length - sub[i].TM2offset;
                 }
@@ -193,6 +193,7 @@ namespace TM2toolmanager
                 { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
                 
             string JsonContent = JsonSerializer.Serialize(sub, indented);
+            JsonContent += "\nIMG";
             File.WriteAllText(unIMGjson, JsonContent);
                 
             if (debug) { Console.WriteLine($"\nJSON has been saved to:\n {PathTool.rmName(unIMGjson)}"); }

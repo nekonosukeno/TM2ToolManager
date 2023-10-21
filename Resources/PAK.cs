@@ -99,10 +99,10 @@ namespace TM2toolmanager
         public static void ExtractPAK(string input, bool debug)
         {
             string slash = PathTool.GetSlashType();
-            
-            string PAKname = PathTool.BaseName(input);
             string cwd = Directory.GetCurrentDirectory();
-            string unPAKdir = $"{cwd}{slash}{PAKname}";
+            string PAKname = PathTool.BaseName(input);
+            string PAKpath = input.Contains(slash) ? PathTool.rmName(input) : $"{cwd}{slash}";
+            string unPAKdir = $"{PAKpath}{PAKname}";
             string unPAKjson = $"{unPAKdir}.json";
             
             var PAKfile = EXTfinder.PAKinfo(input, debug);
@@ -141,10 +141,7 @@ namespace TM2toolmanager
                     
                     cursor += sub[i].fromHeader;
 
-                    if (i == 0)
-                    {
-                        sub[i].PAKname = $"{cwd}{slash}{input}";
-                    }
+                    if (i == 0) { sub[i].PAKname = input; }
 
                     if (i == (PAKfile.contains - 1))
                     {
@@ -216,17 +213,17 @@ namespace TM2toolmanager
                         sub[i].CRLF = hasCRLF;
                     }
                     
-                    // Clearing memory
                     Array.Clear(data);
                 }
                 
                 Console.WriteLine("PAK has been extracted!\n");
 
-                // Writing JaySun
+                // Writing JaySun + type of repack to do when reloaded
                 JsonSerializerOptions indented = new JsonSerializerOptions
                     { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
                 
                 string JsonContent = JsonSerializer.Serialize(sub, indented);
+                JsonContent += "\nPAK";
                 File.WriteAllText(unPAKjson, JsonContent);
                 
                 if (debug) { Console.WriteLine($"JSON has been saved to:\n {PathTool.rmName(unPAKjson)}"); }
@@ -236,7 +233,7 @@ namespace TM2toolmanager
             Array.Clear(PAKfile.buffer);
         }
 
-        public static int GetRePAKsize(string json, bool debug)
+        public static int GetRePAKsize(string jsonContent, bool debug)
         {
             // To get the total size we have a lot of things to consider:
             //     Each subheader length
@@ -247,8 +244,7 @@ namespace TM2toolmanager
             //             before tallying its length
             //         Editing a text file may add a CRLF that wasn't there
             //     else we can use the actual file's length
-            string input = Transcoding.JSONreader(json);
-            PAKsubheader[] oldSubs = JsonSerializer.Deserialize<PAKsubheader[]>(input);
+            PAKsubheader[] oldSubs = JsonSerializer.Deserialize<PAKsubheader[]>(jsonContent);
 
             int LengthNewPAK = 0;
             int txtFooterTotal = 0;
@@ -311,13 +307,12 @@ namespace TM2toolmanager
             return LengthNewPAK;
         }
 
-        public static void RebuildPAK(string json, bool debug)
+        public static void RebuildPAK(string jsonContent, bool debug)
         {
-            string input = Transcoding.JSONreader(json);
-            PAKsubheader[] oldSubs = JsonSerializer.Deserialize<PAKsubheader[]>(input);
+            PAKsubheader[] oldSubs = JsonSerializer.Deserialize<PAKsubheader[]>(jsonContent);
             
             // Constructing the data for the new PAK
-            int LengthNewPAK = GetRePAKsize(json, debug);
+            int LengthNewPAK = GetRePAKsize(jsonContent, debug);
             byte[] NewPAK = new byte[LengthNewPAK];
             int cursor = 0x00;
             string fSizeStr = $"\nRePAK size: {HexTool.BigEndHex(Convert.ToInt32(NewPAK.Length))}";
@@ -325,11 +320,11 @@ namespace TM2toolmanager
             
             for (int i = 0; i < oldSubs.Length; i++)
             {
+                string newFile = PathTool.FileName(oldSubs[i].fName);
+                string found = $"\nFile: \'{newFile}\' has been found!";
+                
                 if (File.Exists(oldSubs[i].fName))
                 {
-                    string newFile = PathTool.FileName(oldSubs[i].fName);
-                    string found = $"\nFile: \'{newFile}\' has been found!";
-                    
                     // Might be a text file that needs to be converted back to SJIS
                     // This text file might have a new CRLF mark that needs to be removed
                     byte[] dataBuffer = File.ReadAllBytes(oldSubs[i].fName);
@@ -405,16 +400,18 @@ namespace TM2toolmanager
                         { ; }
                     }
                 }
-                else { Err.Invalid(input, 3); }
+                else { Err.Invalid(newFile, 3); }
             }
             
             // Writing new PAK archive
+            string slash = PathTool.GetSlashType();
+            string cwd = Directory.GetCurrentDirectory();
             string oldPAK = oldSubs[0].PAKname;
             FileInfo oldFile = new FileInfo(oldPAK);
             
-            string PAKpath = PathTool.rmName(oldPAK);
-            string newPAKname = PathTool.BaseName(oldPAK) + "_mod" + PathTool.GetExt(oldPAK);
-            string newPAKpath = PAKpath + newPAKname;
+            string newPAKname = PathTool.BaseName(oldPAK) + "_mod" + PathTool.GetExt(oldPAK);;
+            string newPAKpath = oldPAK.Contains(slash) ? PathTool.rmName(oldPAK) : $"{cwd}{slash}";
+            string newPAKfile = newPAKpath + newPAKname;
             int OldPAKLength = Convert.ToInt32(oldFile.Length);
 
             if (NewPAK.Length != OldPAKLength)
@@ -423,9 +420,13 @@ namespace TM2toolmanager
                 Console.WriteLine("         This type of change has not been tested in-game yet.");
             }
             
-            File.WriteAllBytes(newPAKpath, NewPAK);
+            File.WriteAllBytes(newPAKfile, NewPAK);
 
-            if (File.Exists(newPAKpath)) {Console.WriteLine($"\nFile: \"{newPAKname}\" has been written to:\n{PAKpath}");}
+            if (File.Exists(newPAKfile))
+            {
+                Console.WriteLine($"\nFile: \"{newPAKname}\" has been written to:\n{newPAKpath}");
+            }
+            else {Err.Invalid(newPAKname, 3);}
         }
 
     }
