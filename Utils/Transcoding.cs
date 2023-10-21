@@ -33,7 +33,6 @@ namespace TM2toolmanager
             try { text = sjis.GetString(textBytes); }
             catch (Exception) { if (debug) {Err.Encoder(textBytes);} }
             
-            // text = sjis.GetString(textBytes);
             byte[] footer = firstNull > 0x03 ? input[firstNull..input.Length] : empty;
             
             // Debug
@@ -89,16 +88,24 @@ namespace TM2toolmanager
             return bCRLF;
         }
         
-        // Does what it says on the can
-        public static string JSONreader(string Path)
+        // I store what type of repack to do as a code in the last line of the json
+        // This reads that comment, removes it, reads the json, and  replaces it
+        public static (string contents, string repackType) JSONreader(string file)
         {
-            string result = "";
-            using (StreamReader readJSON = new StreamReader(Path))
+            string[] lines = File.ReadAllLines(file);
+            string repackType = lines[lines.Length - 1];
+            File.WriteAllLines(file, lines.Take(lines.Length - 1).ToArray());
+            
+            string contents = "";
+            using ( StreamReader readJSON = new StreamReader(file) )
             {
-                result += readJSON.ReadToEnd();
+                contents += readJSON.ReadToEnd();
             }
 
-            return result;
+            string oldContents = contents + repackType;
+            File.WriteAllText(file, oldContents);
+
+            return (contents, repackType);
         }
     }
 }
