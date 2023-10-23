@@ -36,9 +36,8 @@ namespace TM2toolmanager
             byte[] footer = firstNull > 0x03 ? input[firstNull..input.Length] : empty;
             
             // Debug
-            if (debug && (firstNull < 0x21)) {Console.WriteLine($"First Null = {HexTool.BigEndHex(firstNull)} {text}");}
+            if (debug && (firstNull < 0x21)) {Console.WriteLine($"First Null = {HexTool.BigEndHex(firstNull)} \"{text}\"");}
             else if (debug && (firstNull > 0x20)) {Console.WriteLine($"First Null = {HexTool.BigEndHex(firstNull)}");}
-            if (debug) {Console.WriteLine($"Text Footer Length: {HexTool.BigEndHex(footer.Length)}");}
             
             return (text, footer);
         }
