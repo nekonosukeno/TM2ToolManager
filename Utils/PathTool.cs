@@ -81,5 +81,69 @@ namespace TM2toolmanager
 
             return slash;
         }
+
+        public static (byte[] contents, byte[] footer) FileReader(EXTfinder.IMGsubheader IMGsub,
+            EXTfinder.PAKsubheader PAKsub, string type, bool debug)
+        {
+            // This method differentiates whether the input file is a text file or binary data
+            // It also determines and splits any trailing null bytes from the end of a text file
+
+            // The overloads are super hacky on this. Make an empty header of the type you don't need
+            // Idk how else to get this method to work for both header type structs...help me?
+
+            bool bIMG = type.ToLower() == "img";
+
+            byte[] dataBuffer = bIMG ? File.ReadAllBytes(IMGsub.fName) : File.ReadAllBytes(PAKsub.fName);
+            byte[] txtFooterBytes = bIMG ? Convert.FromBase64String(IMGsub.txtFooter) : Convert.FromBase64String(PAKsub.txtFooter);
+            int fLength = dataBuffer.Length;
+            bool isTXT = bIMG ? IMGsub.isText : PAKsub.isText;
+            byte[] textBuffer = isTXT ? Transcoding.ToSJIS(dataBuffer) : new byte[0];
+            bool wasCRLF = bIMG ? IMGsub.CRLF : PAKsub.CRLF;
+            bool nowCRLF = false;
+
+            if (isTXT)
+            {
+                nowCRLF = Transcoding.CheckCRLF(textBuffer);
+                fLength = textBuffer.Length;
+            }
+
+            if (!wasCRLF && nowCRLF)
+            {
+                fLength -= 2;
+                if (debug) {Console.WriteLine("!! NEW CRLF FOUND !!");}
+            }
+
+            byte[] contents = isTXT ? textBuffer[0x00..fLength] : dataBuffer;
+
+            return (contents, txtFooterBytes);
+        }
+        
+        public static void WriteArchive(string oldFile, byte[] newData)
+        {
+            // Writes the given byte[] to a new file in the same location as
+            // the old one. Uses the same name but with "_mod" appended.
+            string slash = PathTool.GetSlashType();
+            string cwd = Directory.GetCurrentDirectory();
+            FileInfo oldFileFI = new FileInfo(oldFile);
+            
+            string newFileName = PathTool.BaseName(oldFile) + "_mod" + PathTool.GetExt(oldFile);
+            string newFilePath = oldFile.Contains(slash) ? PathTool.rmName(oldFile) : $"{cwd}{slash}";
+            string newFile = newFilePath + newFileName;
+            int OldFileLength = Convert.ToInt32(oldFileFI.Length);
+
+            if (newData.Length != OldFileLength)
+            {
+                Console.WriteLine("\nWARNING: You are changing the size of the original archive file.");
+                Console.WriteLine("         This type of change has not been tested in-game yet.");
+            }
+            
+            File.WriteAllBytes(newFile, newData);
+
+            if (File.Exists(newFile))
+            {
+                Console.WriteLine($"\nFile: \"{newFileName}\" has been written to:\n{newFilePath}");
+            }
+            else {Err.Invalid(newFileName, 3);}
+        }
     }
 }
