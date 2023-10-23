@@ -8,13 +8,14 @@ namespace TM2toolmanager
 {
     public static class Err
     {
-        public static string V = "v0.5b";
+        public static string V = "v0.6rc";
         public static List<string> Codes = new List<string>
         {
             "Error: \"", "Invalid argument or cannot find file.", "\" is not supported.",
             "\" could not be found.", "\" is not valid.", "\" has a size that does not match its offset.", 
             "\" could not be rebuilt./n    New size either too large or too small to be valid.",
-            "Batch mode specified but no mode selected.\n       Use extract, repack, or both."
+            "Batch mode specified but no mode selected.\n       Use extract, repack, or both.",
+            "\" could not be extracted; file size is not valid"
         };
         
         public static void Invalid(string file, int reason)
@@ -69,17 +70,11 @@ namespace TM2toolmanager
             Console.WriteLine("    -p, --repack      Repacks all files in directory\n");
             Console.WriteLine("Useage:");
             Console.WriteLine("Unpack PAK or IMG archive (.img, .chr, .pac, .pak, etc):");
-            Console.WriteLine("./TM2toolmanager [-d || --debug] <MyFile0.PAK> [MyFile1.PAK...]\n");
+            Console.WriteLine("./TM2toolmanager [-d || --debug] <MyFile0.PAK> [MyFile1.IMG...]\n");
+            Console.WriteLine("Repack PAK or IMG archive:");
+            Console.WriteLine("./TM2toolmanager [-d || --debug] <MyFile0.json> [MyFile1.json...]\n");
             Console.WriteLine("Using batch mode:");
-            Console.WriteLine("./TM2toolmanager <-b> <-p || -e> [-d] <MyFile.json>\n");
-            Console.WriteLine("Progress:");
-            Console.WriteLine("This tool is currently under construction.");
-            Console.WriteLine("Here are its current functionalities:");
-            Console.WriteLine("    -Batch extract, repack, or both");
-            Console.WriteLine("    -Unpack PAK archive (.chr, .pac, .pak, etc)");
-            Console.WriteLine("    -Rebuild PAK archive (.json)");
-            Console.WriteLine("    - *.cfg files are converted to UTF-8");
-            Console.WriteLine("    -Unpack .img archive (IM2 or IM3)\n");
+            Console.WriteLine("./TM2toolmanager <--batch> <--repack || --extract> [--debug]\n");
             Environment.Exit(1);
         }
     }
