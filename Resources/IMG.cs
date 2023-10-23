@@ -24,14 +24,17 @@ namespace TM2toolmanager
             public int TotalHeaderSize {get; set;} // Initial header plus all sub headers
             // Core
             public string fName {get; set;} // Name of TIM2, null terminated
+            public string fNameBytes {get; set;}
             public int headerLength {get; set;} // 0x40 (IM3) 0x30 (IM2)
             public int chunkSize {get; set;} // 0x20 from start of subheader (IM3 only)
             public int TM2offset {get; set;} // 0x24 from subheader for IM3; 0x20 for IM2
-            public int unk0 {get; set;} // 0x28 (IM3) 0x24 (IM2) (from subheader)
-            public int unk1 {get; set;} // 0x2C (IM3) 0x28 (IM2)
-            public int unk2 {get; set;} // 0x30 (IM3) 0x2C (IM2)
+            public string unknowns {get; set;} // 3 Int32 starting 0x28 (IM3) 0x24 (IM2) (from subheader)
             public int TM2size {get; set;} // 0x44 from subheader (IM3 only)
-            public long footer {get; set;} // Last 0x08 bytes of IM3 subheader
+            public string footer {get; set;} // Last 0x08 bytes of IM3 subheader
+            // Texture animation configs stored as text files:
+            public bool isText {get; set;}
+            public bool CRLF {get; set;}
+            public string txtFooter {get; set;}
         }
 
         public static (bool isIMG, string IMGtype, int TM2count) IMGinfo(string input, bool debug)
@@ -72,7 +75,6 @@ namespace TM2toolmanager
                     break;
             }
 
-            if (debug) { Console.WriteLine("\nRandom secret debug info!\n"); }
             return (isIMG, IMGtype, TM2count);
         }
 
@@ -82,7 +84,7 @@ namespace TM2toolmanager
             string cwd = Directory.GetCurrentDirectory();
             string IMGname = PathTool.BaseName(input);
             string IMGpath = input.Contains(slash) ? PathTool.rmName(input) : $"{cwd}{slash}";
-            string unIMGdir = $"{IMGpath}{IMGname}";
+            string unIMGdir = $"{IMGpath}{IMGname}_IMG";
             string unIMGjson = $"{unIMGdir}.json";
             
             if (!Directory.Exists(unIMGdir)) { Directory.CreateDirectory(unIMGdir); }
@@ -94,9 +96,7 @@ namespace TM2toolmanager
             // Constants for the offsets these values are stored at
             // These fields are shared between IM2 and IM3
             int TM2OffOff = IMGtype == "IM3" ? 0x24 : 0x20;
-            int Unk0off = IMGtype == "IM3" ? 0x28 : 0x24;
-            int Unk1off = IMGtype == "IM3" ? 0x2C : 0x28;
-            int Unk2off = IMGtype == "IM3" ? 0x30 : 0x2C;
+            int UnknownOffs = IMGtype == "IM3" ? 0x28 : 0x24;
             sub[0].headerLength = IMGtype == "IM3" ? 0x40 : 0x30;
             // These are IM3 exclusive fields
             int ChunkOff = 0x20;
@@ -130,25 +130,27 @@ namespace TM2toolmanager
                 }
 
                 // Common values
-                var getName = Transcoding.TextFromBytes(buffer[hold..(hold + 0x20)], debug);
-                string fileName = getName.text + ".tm2";
+                byte[] nameBytes = buffer[hold..(hold + 0x20)];
+                var getName = Transcoding.TextFromBytes(nameBytes, debug);
+                string fileName = getName.text.StartsWith("#") ? getName.text + ".cfg" : getName.text + ".tm2";
+                
                 if (!String.IsNullOrEmpty(fileName)) {sub[i].fName = $"{unIMGdir}{slash}{fileName}";}
+                sub[i].fNameBytes = Convert.ToBase64String(nameBytes);
                 sub[i].TM2offset = HexTool.PS2intReader(buffer[(hold + TM2OffOff)..(hold + TM2OffOff + 0x04)]);
-                sub[i].unk0 = HexTool.PS2intReader(buffer[(hold + Unk0off)..(hold + Unk0off + 0x04)]);
-                sub[i].unk1 = HexTool.PS2intReader(buffer[(hold + Unk1off)..(hold + Unk1off + 0x04)]);
-                sub[i].unk2 = HexTool.PS2intReader(buffer[(hold + Unk2off)..(hold + Unk2off + 0x04)]);
+                byte[] unknownBytes = buffer[(hold + UnknownOffs)..(hold + UnknownOffs + 0x0C)];
+                sub[i].unknowns = Convert.ToBase64String(unknownBytes);
                 
                 // Type dependant values
                 if (IMGtype == "IM3")
                 {
                     sub[i].chunkSize = HexTool.PS2intReader(buffer[(hold + ChunkOff)..(hold + ChunkOff + 0x04)]);
                     sub[i].TM2size = HexTool.PS2intReader(buffer[(hold + TM2sizeOff)..(hold + TM2sizeOff + 0x04)]);
-                    sub[i].footer = HexTool.PS2intReader(buffer[(hold + footerOff)..(hold + footerOff + 0x08)]);
+                    sub[i].footer = Convert.ToBase64String(buffer[(hold + footerOff)..(hold + footerOff + 0x08)]);
                     
-                    int TM2off = hold + TM2sizeOff + 0x40;
+                    int TM2off = hold + TM2OffOff + 0x40;
                     // If last loop, check size offset is now end of file
                     checkTM2Size = i < (TM2count - 1) ?
-                        HexTool.PS2intReader(buffer[TM2off..(TM2off + 0x04)]) : buffer.Length - sub[i].TM2offset;
+                        HexTool.PS2intReader(buffer[TM2off..(TM2off + 0x04)]) : buffer.Length;
                 }
                 else // if (IMGtype == "IM2")
                 {
@@ -156,7 +158,11 @@ namespace TM2toolmanager
                     sub[i].TM2size = i < (TM2count - 1) ?
                         checkTM2Size - sub[i].TM2offset : buffer.Length - sub[i].TM2offset;
                 }
-
+                
+                // Next file's start offset minus the start offset of the current file == current file's size
+                // If last file, length of file minus length of current file.
+                // Size is a calculated value for IM2 so this check only applies to IM3
+                checkTM2Size -= sub[i].TM2offset;
                 bool verifiedTM2 = checkTM2Size == sub[i].TM2size;
                 
                 // Debug info
@@ -165,9 +171,7 @@ namespace TM2toolmanager
                     Console.WriteLine($"\nCursor {i} @ {HexTool.BigEndHex(cursor)}\n");
                     if (IMGtype == "IM3") {Console.WriteLine($"Chunk Size: {HexTool.LitEndHex(sub[i].chunkSize)}");}
                     Console.WriteLine($"TM2 Offset: {HexTool.LitEndHex(sub[i].TM2offset)}");
-                    Console.WriteLine($"Unkown0 Offset: {HexTool.LitEndHex(sub[i].unk0)}");
-                    Console.WriteLine($"Unkown1 Offset: {HexTool.LitEndHex(sub[i].unk1)}");
-                    Console.WriteLine($"Unkown2 Offset: {HexTool.LitEndHex(sub[i].unk2)}");
+
                     if (IMGtype == "IM3")
                     {
                         Console.WriteLine($"TM2 Size: {HexTool.LitEndHex(sub[i].TM2size)}");
@@ -179,10 +183,47 @@ namespace TM2toolmanager
                 }
 
                 // Writing TM2 files
+                sub[i].CRLF = false;
                 byte[] TM2data = buffer[sub[i].TM2offset..(sub[i].TM2offset + sub[i].TM2size)];
-                if (TM2data.Length > 0x40) { File.WriteAllBytes(sub[i].fName, TM2data); }
+                if (TM2data.Length > 0x40)
+                {
+                    if (getName.text.StartsWith("#"))
+                    {
+                        sub[i].isText = true;
+                        var getText = Transcoding.TextFromBytes(TM2data, debug);
 
-                // Clearing memory
+                        if (getText.footer.Length > 0x00)
+                        {
+                            byte[] sjisBuffer = TM2data[0x00..(TM2data.Length - getText.footer.Length)];
+                            byte[] txtBuffer = Transcoding.ToUTF8(sjisBuffer);
+                                
+                            File.WriteAllBytes(@sub[i].fName, txtBuffer);
+                            sub[i].txtFooter = Convert.ToBase64String(getText.footer);
+                            sub[i].CRLF = Transcoding.CheckCRLF(sjisBuffer);
+                                
+                            Array.Clear(txtBuffer);
+                        }
+                        else
+                        {
+                            byte[] U8data = Transcoding.ToUTF8(TM2data);
+                            File.WriteAllBytes(@sub[i].fName, U8data);
+                                
+                            byte[] empty = new byte[0];
+                            sub[i].txtFooter = Convert.ToBase64String(empty);
+                                
+                            Array.Clear(U8data);
+                        }
+                    }
+                    else // if fileName is NOT a text file
+                    {
+                        byte[] empty = new byte[0];
+                        sub[i].txtFooter = Convert.ToBase64String(empty);
+                        sub[i].isText = false;
+                        File.WriteAllBytes(@sub[i].fName, TM2data);
+                    }
+                }
+                else { Err.Invalid(fileName, 8); }
+                    
                 Array.Clear(TM2data);
 
                 cursor += sub[0].headerLength;
@@ -194,10 +235,155 @@ namespace TM2toolmanager
                 
             string JsonContent = JsonSerializer.Serialize(sub, indented);
             JsonContent += "\nIMG";
-            File.WriteAllText(unIMGjson, JsonContent);
+            File.WriteAllText(@unIMGjson, JsonContent);
                 
             if (debug) { Console.WriteLine($"\nJSON has been saved to:\n {PathTool.rmName(unIMGjson)}"); }
             Console.WriteLine($"\n{Convert.ToString(TM2count)} TIM2 files have been extracted!");
+        }
+
+        public static int GetReIMGsize(string jsonContent, bool debug)
+        {
+            // Read the notes on GetRePAKsize() if you're confused about what's going on here
+            IMGsubheader[] oldSubs = JsonSerializer.Deserialize<IMGsubheader[]>(jsonContent);
+
+            int LengthNewIMG = 0;
+            int txtFooterTotal = 0;
+
+            // Calculating each new file's size
+            for (int i = 0; i < oldSubs.Length; i++)
+            {
+                FileInfo newFile = new FileInfo(oldSubs[i].fName);
+                bool isTXT = oldSubs[i].isText;
+                PAKsubheader empty = new PAKsubheader();
+                var fInfo = PathTool.FileReader(oldSubs[i], empty, "IMG", debug);
+
+                int fLength = fInfo.contents.Length;
+                int txtFooterLength = fInfo.footer.Length;
+                txtFooterTotal += txtFooterLength;
+                
+                if (debug)
+                {
+                    if (isTXT)
+                    {
+                        Console.WriteLine($"!!  Using Text Mode  !!");
+                        Console.WriteLine($"Text Footer #{Convert.ToString(i)} Length: {Convert.ToString(txtFooterLength)}");
+                    }
+                    Console.WriteLine($"New File Length: {Convert.ToString(fLength)}");
+                }
+                LengthNewIMG += fLength;
+            }
+            LengthNewIMG += oldSubs[0].TotalHeaderSize + txtFooterTotal;
+
+            string oldIMG = oldSubs[0].IMGname;
+            string newIMGname = PathTool.BaseName(oldIMG) + "_mod" + PathTool.GetExt(oldIMG);
+            long A_LOT = 2 * ((1024 * 1024 * 1024) - 1); // 2GB
+            
+            if ((LengthNewIMG < 0x100) || (LengthNewIMG >= A_LOT )) {Err.Invalid(newIMGname, 6);}
+            
+            if (debug) {Console.WriteLine($"New IMG Length: {HexTool.BigEndHex(LengthNewIMG)}\n");}
+            
+            return LengthNewIMG;
+        }
+        
+        public static void RebuildIMG(string jsonContent, bool debug)
+        {
+            IMGsubheader[] oldSubs = JsonSerializer.Deserialize<IMGsubheader[]>(jsonContent);
+            
+            int LengthNewIMG = GetReIMGsize(jsonContent, debug);
+            byte[] NewIMG = new byte[LengthNewIMG];
+            int cursor = 0x00;
+            int TM2cursor = oldSubs[0].TotalHeaderSize;
+            string fSizeStr = $"\nNew IMG size: {HexTool.BigEndHex(Convert.ToInt32(NewIMG.Length))}";
+            if (debug) { Console.WriteLine(fSizeStr); }
+            
+            byte[] IMGheader = Convert.FromBase64String(oldSubs[0].IMGheader);
+            HexTool.InsertBytes(NewIMG, IMGheader, cursor);
+            cursor += IMGheader.Length;
+            
+            for (int i = 0; i < oldSubs.Length; i++)
+            {
+                if (debug) {Console.WriteLine($"Cursor @ {HexTool.LitEndHex(cursor)}");}
+                bool bIM3 = oldSubs[0].IMGtype == "IM3";
+                
+                // Both: Name
+                byte[] nameBytes = Convert.FromBase64String(oldSubs[i].fNameBytes);
+                HexTool.InsertBytes(NewIMG, nameBytes, cursor);
+                cursor += 0x20;
+                
+                // IM3: Chunk
+                if (bIM3)
+                {
+                    byte[] chunk = HexTool.IntToBytesPS2(oldSubs[i].chunkSize);
+                    HexTool.InsertBytes(NewIMG, chunk, cursor);
+                    cursor += chunk.Length;
+                }
+                
+                // Both: TM2 Offset, Unknown Int32[3]
+                PAKsubheader empty = new PAKsubheader();
+                var importInfo = PathTool.FileReader(oldSubs[i], empty, "IMG", debug);
+                int newTM2size = importInfo.contents.Length + importInfo.footer.Length;
+                byte[] TM2off = HexTool.IntToBytesPS2(TM2cursor);
+                
+                HexTool.InsertBytes(NewIMG, TM2off, cursor);
+                int printNewOff = TM2cursor;
+                cursor += TM2off.Length;
+                TM2cursor += newTM2size;
+                
+                byte[] unknownBytes = Convert.FromBase64String(oldSubs[i].unknowns);
+                HexTool.InsertBytes(NewIMG, unknownBytes, cursor);
+                cursor += unknownBytes.Length;
+                
+                // IM3: Size, footer
+                if (bIM3)
+                {
+                    byte[] TM2size = HexTool.IntToBytesPS2(newTM2size);
+                    HexTool.InsertBytes(NewIMG, TM2size, cursor);
+                    cursor += TM2size.Length;
+                
+                    byte[] footer = Convert.FromBase64String(oldSubs[i].footer);
+                    HexTool.InsertBytes(NewIMG, footer, cursor);
+                    cursor += footer.Length;
+                }
+
+                if (debug)
+                {
+                    Console.WriteLine($"File: {PathTool.FileName(oldSubs[i].fName)}");
+                    Console.WriteLine($"TM2 Cursor @ {HexTool.LitEndHex(printNewOff)}");
+                    if (oldSubs[i].TM2size != newTM2size)
+                    {
+                        Console.WriteLine($"New Size: {HexTool.BigEndHex(newTM2size)}");
+                        Console.WriteLine(printNewOff);
+                    }
+                }
+            }
+            
+            // Adding files to new IMG
+            for (int i = 0; i < oldSubs.Length; i++)
+            {
+                string newFile = PathTool.FileName(oldSubs[i].fName);
+                
+                if (File.Exists(oldSubs[i].fName))
+                {
+                    if (debug) { Console.WriteLine($"\nFile: \'{newFile}\' has been found!"); }
+
+                    PAKsubheader empty = new PAKsubheader();
+                    var importInfo = PathTool.FileReader(oldSubs[i], empty, "IMG", debug);
+                    
+                    HexTool.InsertBytes(NewIMG, importInfo.contents, cursor);
+                    cursor += importInfo.contents.Length;
+                    
+                    if (importInfo.footer.Length > 0)
+                    {
+                        HexTool.InsertBytes(NewIMG, importInfo.footer, cursor);
+                        cursor += importInfo.footer.Length;
+                    }
+                }
+                else { Err.Invalid(newFile, 3); }
+            }
+            
+            // Writing new IMG archive
+            string oldIMG = oldSubs[0].IMGname;
+            PathTool.WriteArchive(oldIMG, NewIMG);
         }
     }
 }
