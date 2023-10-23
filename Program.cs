@@ -87,7 +87,7 @@ namespace TM2toolmanager
             {
                 string fName = inputFile;
                 if (bDebug) { Console.WriteLine($"Input File: {fName}"); }
-                
+
                 var IMGinfo = EXTfinder.IMGinfo(fName, bDebug);
 
                 if (IMGinfo.isIMG)
@@ -102,6 +102,10 @@ namespace TM2toolmanager
                     if (jsonContents.repackType == "PAK")
                     {
                         EXTfinder.RebuildPAK(jsonContents.contents, bDebug);
+                    }
+                    else if (jsonContents.repackType == "IMG")
+                    {
+                        EXTfinder.RebuildIMG(jsonContents.contents, bDebug);
                     }
                     else
                     {
