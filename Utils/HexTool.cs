@@ -15,8 +15,6 @@ namespace TM2toolmanager
         // Reads byte array, corrects endian, and returns int32
         public static int PS2intReader(byte[] raw)
         {
-            // for (int i = 0; i < raw.Length; i++) { Console.WriteLine($"0 x {BitConverter.ToString(new[] {raw[i]})} "); }
-            
             // Numeric values stored in PS2 binary files are always little endian
             if (!BitConverter.IsLittleEndian) { Array.Reverse(raw); }
             return BitConverter.ToInt32(raw);
@@ -26,11 +24,7 @@ namespace TM2toolmanager
         // prints the given int32 in little endian because...reasons??
         {
             byte[] getHex = BitConverter.GetBytes(offset);
-            if (!BitConverter.IsLittleEndian)
-            {
-                // Console.WriteLine("BigEndian");
-                Array.Reverse(getHex);
-            }
+            if (!BitConverter.IsLittleEndian) { Array.Reverse(getHex); }
 
             string result = "0 x ";
             foreach (byte b in getHex)
@@ -48,16 +42,13 @@ namespace TM2toolmanager
 
             string LeadIn = "0x";
             string result = "";
+            
             for (int i = 0; i < getHex.Length; i++)
             {
                 result += BitConverter.ToString( new[] { getHex[i] } );
             }
 
-            while (result.StartsWith("0"))
-            {
-                // if (result.StartsWith("0")) { result = result.Substring(1); }
-                result = result.Substring(1);
-            }
+            while (result.StartsWith("0")) { result = result.Substring(1); }
             
             if (result.Length == 0) { result = "00"; }
             if (result.Length == 1) { result = "0" + result; }
@@ -67,7 +58,7 @@ namespace TM2toolmanager
         }
         
         public static int IndexOfByte(byte[] bytes, string find)
-            // finds index of specific byte cause this is a pain to do
+        // finds index of specific byte cause this is a pain to do
         {
             find = find.Replace(" ", "");
             if (find.StartsWith("0x")) { find = find.Substring(2); }
@@ -92,13 +83,11 @@ namespace TM2toolmanager
         }
 
         public static byte[] IntToBytesPS2(int input)
+        // Preps byte array to be written to data file
         {
             byte[] getHex = BitConverter.GetBytes(input);
-            if (!BitConverter.IsLittleEndian)
-            {
-                // Console.WriteLine("BigEndian");
-                Array.Reverse(getHex);
-            }
+            if (!BitConverter.IsLittleEndian) { Array.Reverse(getHex); }
+            
             return getHex;
         }
     }
