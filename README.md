@@ -43,3 +43,11 @@ Using batch mode (all valid files in directory):
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-b, --batch&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Use batch processing  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-e, --extract&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Used with batch. Extract all files in directory  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-p, --repack&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Used with batch. Repacks all extracted files in directory  
+
+**Planned** ~~bugs~~ **features and known bugs:**  
+- Needs to auto-extract PAKs contained inside of other PAKs  
+- Needs support for DQ8M (mobile) PAKs  
+- Needs parser for .clo, .lst, .str, and .mes text files  
+- Multiple dummy headers at end of PAK causes error  
+- Allow repacking of empty files  
+- Auto unswizzle TM2 (Possibly not until v2.0)  
