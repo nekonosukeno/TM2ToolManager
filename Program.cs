@@ -59,7 +59,8 @@ namespace TM2toolmanager
             string cwd = Directory.GetCurrentDirectory();
             List<string> files = Directory.EnumerateFiles(cwd).ToList();
             List<string> Extensions = new List<string>
-                { ".json", ".txt", ".cfg", ".py", ".md", ".cs", ".mds", ".mot", ".tm2", ".bak", ".png", ".pdb", "ger" };
+                { ".json", ".txt", ".cfg", ".py", ".md", ".cs", ".mds", ".mot", ".tm2", ".bak", ".png",
+                    ".pdb", "ger", ".exe", ".bin", ".lst", ".str", ".mes" };
 
             if (bBatch)
             {
@@ -86,34 +87,81 @@ namespace TM2toolmanager
             foreach (string inputFile in fileList)
             {
                 string fName = inputFile;
+                string slash = PathTool.GetSlashType();
+                string unPAKdir = fName.Contains(slash) ?
+                    $"{PathTool.rmName(fName)}{PathTool.BaseName(fName)}" : $"{cwd}{slash}{PathTool.BaseName(fName)}";
                 if (bDebug) { Console.WriteLine($"Input File: {fName}"); }
 
-                var IMGinfo = EXTfinder.IMGinfo(fName, bDebug);
+                Archives.IMGinfo IMGinfo = Archives.getIMGinfo(fName, bDebug);
 
                 if (IMGinfo.isIMG)
                 {
                     Console.WriteLine($"{IMGinfo.IMGtype} has been found!");
-                    EXTfinder.ExtractIMG(fName, IMGinfo.IMGtype, IMGinfo.TM2count, bDebug);
+                    Archives.ExtractIMG(IMGinfo, bDebug);
                 }
             
                 else if (fName.EndsWith(".json"))
                 {
                     var jsonContents = Transcoding.JSONreader(fName);
+                    
                     if (jsonContents.repackType == "PAK")
                     {
-                        EXTfinder.RebuildPAK(jsonContents.contents, bDebug);
+                        Console.WriteLine("Searching for IMG archives that were in this PAK...");
+                        // Console.WriteLine($"Looking in: {unPAKdir}");
+                        
+                        List<string> unPAKedFiles = Directory.EnumerateFiles(@unPAKdir).ToList();
+
+                        foreach (string file in unPAKedFiles)
+                        {
+                            string checkJson = file;
+                            if (checkJson.EndsWith(".json"))
+                            {
+                                var PAKjsonContents = Transcoding.JSONreader(checkJson);
+
+                                if (PAKjsonContents.repackType == "IMG")
+                                {
+                                    PathTool.BackupIMG(PAKjsonContents.contents, bDebug);
+                                }
+                            }
+                        }
+                        
+                        Console.WriteLine("Repacking PAK archive...");
+                        Archives.RebuildPAK(jsonContents.contents, bDebug);
                     }
                     else if (jsonContents.repackType == "IMG")
                     {
-                        EXTfinder.RebuildIMG(jsonContents.contents, bDebug);
+                        Archives.RebuildIMG(jsonContents.contents, bDebug);
                     }
                     else
                     {
                         Console.WriteLine("Do not have a repacker for this type.");
                     }
                 }
-            
-                else { EXTfinder.ExtractPAK(fName, bDebug); }
+
+                else
+                {
+                    // Aiming for a PAK archive here. If extracted, checks subdirectory
+                    // for IMG files and extracts those as well
+                    Archives.ExtractPAK(fName, bDebug);
+                    
+                    if (Directory.Exists(@unPAKdir))
+                    {
+                        Console.WriteLine("\nSearching for IMG archives that were in this PAK...\n");
+                        List<string> unPAKedFiles = Directory.EnumerateFiles(@unPAKdir).ToList();
+
+                        foreach (string file in unPAKedFiles)
+                        {
+                            string fileName = file;
+                            Archives.IMGinfo unPAKisIMG = Archives.getIMGinfo(fileName, bDebug);
+
+                            if (unPAKisIMG.isIMG)
+                            {
+                                Console.WriteLine($"{unPAKisIMG.IMGtype} has been found! Unpacking now...");
+                                Archives.ExtractIMG(unPAKisIMG, bDebug);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
