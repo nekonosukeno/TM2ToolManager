@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace TM2toolmanager
@@ -82,8 +83,8 @@ namespace TM2toolmanager
             return slash;
         }
 
-        public static (byte[] contents, byte[] footer) FileReader(EXTfinder.IMGsubheader IMGsub,
-            EXTfinder.PAKsubheader PAKsub, string type, bool debug)
+        public static (byte[] contents, byte[] footer) FileReader(Archives.IMGsubheader IMGsub,
+            Archives.PAKsubheader PAKsub, string type, bool debug)
         {
             // This method differentiates whether the input file is a text file or binary data
             // It also determines and splits any trailing null bytes from the end of a text file
@@ -141,9 +142,53 @@ namespace TM2toolmanager
 
             if (File.Exists(newFile))
             {
-                Console.WriteLine($"\nFile: \"{newFileName}\" has been written to:\n{newFilePath}");
+                Console.WriteLine($"\nFile: \"{newFileName}\" has been written to:\n{newFilePath}\n");
             }
             else {Err.Invalid(newFileName, 3);}
+        }
+
+        public static void BackupIMG(string jsonContent, bool debug)
+        {
+            // Call immediately before rePAKing to backup OG IMG
+            // Detects if user manually reIMG'd, if not repacks IMG
+            //
+            // To make a backup we need the original IMG name, the .bak name
+            // and the IMG_mod name. Rename OG to IMG.bak and IMG_mod to OG IMG name
+            string JSON = jsonContent;
+            Archives.IMGsubheader[] subs = JsonSerializer.Deserialize<Archives.IMGsubheader[]>(JSON);
+            
+            string oldIMG = subs[0].IMGname;
+            string slash = PathTool.GetSlashType();
+            string cwd = oldIMG.Contains(slash) ? PathTool.rmName(oldIMG) : oldIMG;
+            
+            // IMG.img
+            string IMGog = oldIMG;
+            // IMG.img.bak
+            string IMGbak = $"{IMGog}.bak";
+            // IMG_mod.img
+            string newIMG = PathTool.BaseName(oldIMG) + "_mod" + PathTool.GetExt(oldIMG);
+            string newIMGpath = oldIMG.Contains(slash) ? PathTool.rmName(oldIMG) : $"{cwd}{slash}";
+            string IMGmod = newIMGpath + newIMG;
+            
+            // End User did NOT manually repack IMG
+            if (!File.Exists(IMGmod))
+            {
+                Console.WriteLine("\nNo repacked IMG detected, repacking now...");
+                Archives.RebuildIMG(jsonContent, debug);
+            }
+            
+            // This will delete the original file if you mod the same IMG twice
+            // Be sure to keep more substantial backups
+            if (File.Exists(IMGmod))
+            {
+                Console.WriteLine("Backing up original IMG...\n");
+                if (File.Exists(@IMGbak)) { File.Delete(@IMGbak); }
+                File.Move(@IMGog, @IMGbak);
+            
+                if (File.Exists(@IMGog)) { File.Delete(@IMGog); }
+                File.Move(@IMGmod, @IMGog);
+            }
+            else {Console.WriteLine("Error: could not find IMG to replace original!");}
         }
     }
 }
