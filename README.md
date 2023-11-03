@@ -28,8 +28,9 @@ stages of progress based on amount of steps it reduces in producing a texture mo
 **Stage 3:** Extract and replace any texture from PAK/IM3 as editable PNG (replacing all GUI programs)  
   
 **Useage / Switch Order:**  
-Add the executable to your Path or move game file to same directory as tool  
-In the examples below, [these] are optional arguments and <these> are required.  
+With CLI it's best to use full paths or cd to the file  
+Drag 'n' Drop also supported  
+In the examples below, [these] are optional arguments and <these> are required  
   
 Unpack or repack PAK or IMG archive (.chr, .pac, .pak, .img, .json etc):  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;./TM2toolmanager [-d || --debug] <MyFile.PAK> [another0.IMG another1.json etc]  
@@ -45,7 +46,7 @@ Using batch mode (all valid files in directory):
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-p, --repack&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Used with batch. Repacks all extracted files in directory  
 
 **Planned** ~~bugs~~ **features and known bugs:**  
-- Needs to auto-extract PAKs contained inside of other PAKs  
+- Needs to auto-extract/repack PAKs contained inside of other PAKs  
 - Needs support for DQ8M (mobile) PAKs  
 - Needs parser for .clo, .lst, .str, and .mes text files  
 - Multiple dummy headers at end of PAK causes error  
